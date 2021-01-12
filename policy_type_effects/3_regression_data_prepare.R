@@ -1,15 +1,17 @@
 # create dataset for RECS regressions
 # Peter Berrill
-# last updated May 1 2020
+# last updated Jan 11 2021
 
 rm(list=ls()) # clear workspace
 cat("\014") # clear console
+library(dplyr)
 # Read in RECS data for all RECS years since 1990, adjusted to include space heating from biomass and other non-counted fuels (coal, solar, district steam heat)
 load("RECSincOth.Rdata")
 
 # make some data cleaning adjustments ########### 
 # remove year 1997 because of poor data quality, especially surrounding floor area estimates
 rh<-RECS[!(RECS$RECSYEAR==1997),] # rh is the dataset I will use for the household regression
+
 rh$AgeCohort<-as.factor(rh$AgeCohort)
 
 levels(rh$EQUIPAGE)<-levels(recode(rh$EQUIPAGE,"0"="NA/DontKnow","1"="<2YR","2"="2-4YR","3"="5-9YR","4"="10-19YR","5"="20+YR"))
@@ -70,8 +72,26 @@ rh<-within(rh, TYPEHUQ<-relevel(TYPEHUQ, ref = "Man Housing")) # make level 2  "
 rh<-within(rh, FUELH2O<-relevel(FUELH2O, ref = "None"))
 rh$Cohort<-rh$AgeCohort
 rh$Cohort[rh$Cohort== "2010s"]<-"2000s"
+rh$Cohort[rh$Cohort== "1960s"]<-"1950s"
 rh$Cohort<-droplevels(rh$Cohort)
 levels(rh$Cohort)[levels(rh$Cohort)=="2000s"] <- "2000+"
+levels(rh$Cohort)[levels(rh$Cohort)=="1950s"] <- "1950-60s"
 # make dataframe with urban observations only
+rh2<-rh[rh$URBAN==1,]
 ru2<-rh[rh$URBAN==1,]
-save(ru2,file="RECSUrbanRegData.Rdata")
+save(rh,ru2,file="RECSUrbanRegDataNew.Rdata")
+
+# calcualte GHGI of end-uses, check the units #########
+load("RECSGHG.RData")
+ru15<-RECSGHG[RECSGHG$RECSYEAR=="2015",]
+ru15<-ru15[ru15$URBAN==1,]
+ghgi_sph<-tapply(ru15$NWEIGHT*ru15$GHGSPH,ru15$TYPEHUQ,sum)/tapply(ru15$NWEIGHT*ru15$BTUSPH,ru15$TYPEHUQ,sum)
+ghgi_spc<-tapply(ru15$NWEIGHT*ru15$GHGCOL,ru15$TYPEHUQ,sum)/tapply(ru15$NWEIGHT*ru15$BTUCOL,ru15$TYPEHUQ,sum)
+ghgi_dhw<-tapply(ru15$NWEIGHT*ru15$GHGDHW,ru15$TYPEHUQ,sum)/tapply(ru15$NWEIGHT*ru15$BTUDHW,ru15$TYPEHUQ,sum)
+ghgi_oth<-tapply(ru15$NWEIGHT*ru15$GHGOTH,ru15$TYPEHUQ,sum)/tapply(ru15$NWEIGHT*ru15$BTUOTH,ru15$TYPEHUQ,sum)
+
+ghgi_avg<-sum(ru15$NWEIGHT*ru15$GHGSPH)/sum(ru15$NWEIGHT*ru15$BTUSPH)
+ghgi_avg[2]<-sum(ru15$NWEIGHT*ru15$GHGCOL)/sum(ru15$NWEIGHT*ru15$BTUCOL)
+ghgi_avg[3]<-sum(ru15$NWEIGHT*ru15$GHGDHW)/sum(ru15$NWEIGHT*ru15$BTUDHW)
+ghgi_avg[4]<-sum(ru15$NWEIGHT*ru15$GHGOTH)/sum(ru15$NWEIGHT*ru15$BTUOTH)
+save(ghgi_sph,ghgi_spc,ghgi_dhw,ghgi_oth,ghgi_avg,file='GHGI_eu_ty.RData')

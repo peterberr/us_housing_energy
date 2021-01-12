@@ -5,6 +5,7 @@
 rm(list=ls()) # clear workspace
 cat("\014") # clear console
 graphics.off() # remove graphics windows
+# setwd("C:/Users/pb637/Documents/Yale Courses/Research/RECS research/EST Data and Codes")
 # packages
 library(dplyr)
 library(ggplot2)
@@ -101,15 +102,20 @@ eph15<-e15/s15
 eph15r<-e15r/s15r
 eph15u<-e15u/s15u
 
-cf1<-read.csv("StartsCounterfactual.csv")
-diffreg80<-sum(cf1$SingleFamilyDiff[1:4])
-diffreg90<-sum(cf1$SingleFamilyDiff[5:14])
-diffreg00<-sum(cf1$SingleFamilyDiff[15:24])
-diffreg10<-sum(cf1$SingleFamilyDiff[25:29])
+cf1<-read.csv("StartsCounterfactual_alt.csv")
+
+diffreg70<-sum(cf1$SingleFamilyDiff[1:7])
+diffreg80<-sum(cf1$SingleFamilyDiff[8:17])
+diffreg90<-sum(cf1$SingleFamilyDiff[18:27])
+diffreg00<-sum(cf1$SingleFamilyDiff[28:37])
+diffreg10<-sum(cf1$SingleFamilyDiff[38:42]) # 2010-2014
 
 # regression based hypothetical stock
 s15uhyp2<-s15u
-# 1980
+# 1970s
+s15uhyp2[2:3,4]<-(sum(s15u[2:3,4])-(1000*diffreg70))*s15u[2:3,4]/sum(s15u[2:3,4])
+s15uhyp2[4:5,4]<-(sum(s15u[4:5,4])+(1000*diffreg70))*s15u[4:5,4]/sum(s15u[4:5,4])
+# 1980s
 s15uhyp2[2:3,5]<-(sum(s15u[2:3,5])-(1000*diffreg80))*s15u[2:3,5]/sum(s15u[2:3,5])
 s15uhyp2[4:5,5]<-(sum(s15u[4:5,5])+(1000*diffreg80))*s15u[4:5,5]/sum(s15u[4:5,5])
 # 1990s
@@ -135,7 +141,7 @@ dhw15uhyp2<-s15uhyp2*dhwph15u
 oth15uhyp2<-s15uhyp2*othph15u
 
 save(sph15u,spc15u,dhw15u,oth15u,sph15uhyp2,spc15uhyp2,dhw15uhyp2,oth15uhyp2,
-     sphph15u,spcph15u,dhwph15u,othph15u,eph15u,e15u,file="end_uses_CF.RData")
+     sphph15u,spcph15u,dhwph15u,othph15u,eph15u,e15u,sphph15u,spcph15u,dhwph15u,othph15u,file="end_uses_CF.RData")
 
 # plot some figures of new stock and energy #########################
 # 2015 stock
@@ -145,46 +151,47 @@ dis<-as.data.frame(100*as.numeric(unlist(ds)))
 colnames(dis)<-"Percentage"
 dis$Cohort<-rep(levels(as.factor(r$AgeCohort)),each=5)
 dis$Type<-rep(c("Manuf. Hous","Sing-Fam Det","Sing-Fam Att","Mul-Fam Low","Mul-Fam High"),8)
-
-# Supplementary Figure 4 a)
+dis<-dis[!dis$Type=="Manuf. Hous",]
+pal2<-c("#D95F02", "#7570B3", "#E7298A", "#66A61E")
+# Supplementary Figure 2 a)
 p <- ggplot(dis, aes(x = Cohort, y = Percentage))+ylim(0,20)+
   geom_col(aes(fill = Type), width = 0.7) +
   # theme_minimal() +
   labs(title = "a) Urban housing by Cohort and Type, 2015", y = "Portion (%)") +
   theme(axis.text=element_text(size=10.5),
         axis.title=element_text(size=12,face = "bold"),
-        plot.title = element_text(size = 14, face = "bold")) + scale_fill_brewer(palette="Dark2")
+        plot.title = element_text(size = 14, face = "bold")) + scale_fill_manual(values=pal2)
 scale_fill_hue(l=45)
 windows()
 p
 
-# 2015 stock, only from 1980s onwards, abs vales
-s15u<-rbind(s15u,colSums(s15u))
+# 2015 stock, only from 1970s onwards, abs vales
+# s15u<-rbind(s15u,colSums(s15u))
 ds<-as.data.frame(s15u[1:5,1:8])*1e-6
 dis<-as.data.frame(as.numeric(unlist(ds)))
 colnames(dis)<-"Units"
 dis$Cohort<-rep(levels(as.factor(r$AgeCohort)),each=5)
 dis$Type<-rep(c("Manuf. Hous","Sing-Fam Det","Sing-Fam Att","Mul-Fam Low","Mul-Fam High"),8)
-dis$Period<-"<1980"
-dis$Period[21:40]<-"Actual"
+dis$Period<-"<1970"
+dis$Period[16:40]<-"Actual"
 
 # hypothetical 2015 stock
-s15uhyp2<-rbind(s15uhyp2,colSums(s15uhyp2))
 ds2<-as.data.frame(s15uhyp2[1:5,1:8])*1e-6
 dis2<-as.data.frame(as.numeric(unlist(ds2)))
-colnames(dis2)<-"Percentage"
+colnames(dis2)<-"Units"
 dis2$Cohort<-rep(levels(as.factor(r$AgeCohort)),each=5)
 dis2$Type<-rep(c("Manuf. Hous","Sing-Fam Det","Sing-Fam Att","Mul-Fam Low","Mul-Fam High"),8)
 
-# Figure 1 a)
-dis[41:60,]<-dis2[21:40,]
-dis$Period[41:60]<-"No fed policy"
-p <- ggplot(dis[21:60,], aes(x = Period, y = Units))+#ylim(0,20)+
+# Figure 4 a)
+dis[41:65,]<-dis2[16:40,]
+dis$Period[41:65]<-"No fed policy"
+dis[dis$Type=="Manuf. Hous",]$Units<-0
+p <- ggplot(dis[16:65,], aes(x = Period, y = Units))+
   geom_col(aes(fill = Type), width = 0.5) +
   # theme_minimal() +
-  labs(title = "a) Post-1980 Urban Type Mix, 2015", y = "Million Housing Units", x="Policy scenario") +
-  theme(axis.text=element_text(size=10.5),
-        axis.title=element_text(size=12,face = "bold"),
+  labs(title = "a) Post-1970 Urban Type Mix, 2015", y = "Million Housing Units", x="Policy scenario") +
+  theme(axis.text=element_text(size=13),
+        axis.title=element_text(size=13,face = "bold"),
         plot.title = element_text(size = 14, face = "bold")) + scale_fill_brewer(palette="Dark2")
 scale_fill_hue(l=45)
 windows()
@@ -197,15 +204,16 @@ dis<-as.data.frame(100*as.numeric(unlist(ds)))
 colnames(dis)<-"Percentage"
 dis$Cohort<-rep(levels(as.factor(r$AgeCohort)),each=5)
 dis$Type<-rep(c("Manuf. Hous","Sing-Fam Det","Sing-Fam Att","Mul-Fam Low","Mul-Fam High"),8)
+dis<-dis[!dis$Type=="Manuf. Hous",]
 
-# Supplementary Figure 4 b)
+# Supplementary Figure 2 b)
 p <- ggplot(dis, aes(x = Cohort, y = Percentage))+ylim(0,20)+
   geom_col(aes(fill = Type), width = 0.7) +
   # theme_minimal() +
   labs(title = "b) Policy counterfactual of urban housing, 2015", y = "Portion (%)") +
   theme(axis.text=element_text(size=10.5),
         axis.title=element_text(size=12,face = "bold"),
-        plot.title = element_text(size = 14, face = "bold")) + scale_fill_brewer(palette="Dark2")
+        plot.title = element_text(size = 14, face = "bold")) + scale_fill_manual(values=pal2)
 scale_fill_hue(l=45)
 windows()
 p
